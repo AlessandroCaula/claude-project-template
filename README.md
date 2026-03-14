@@ -18,6 +18,7 @@ This scaffolding serves two purposes:
 | `CONTEXT.md` | Current project state: goal, repo structure, toolchain | Claude, when structure changes |
 | `TODO.md` | Task tracker with short IDs (`#N`) | Claude, automatically |
 | `DEVLOG.md` | Project journal, newest entry at top | Claude, on `/commit` |
+| `NOTES.md` | A scratchpad for ideas, supervisor feedback, open questions, and anything that doesn't fit neatly into TODO or DEVLOG |
 
 ---
 
@@ -43,6 +44,15 @@ Every git commit is the unit of tracking. When you run `/commit`:
 
 Using the diff as the source of truth means DEVLOG stays accurate even across multiple conversation windows.
 
+### The `/recap` command
+
+Run `/recap` to get a quick project briefing — useful when coming back after time away or switching context. Claude reads `TODO.md`, `DEVLOG.md`, and `NOTES.md` and returns:
+
+- What is currently in progress
+- What was recently done and decided
+- Open questions and ideas from NOTES.md
+- Suggested next steps based on Up Next and NOTES.md
+
 ---
 
 ## Setting Up a New Project
@@ -58,18 +68,57 @@ TODO.md         ← start with empty sections
 DEVLOG.md       ← start empty
 ```
 
-### 2. Install the `/commit` command
+### 2. Install the `/commit` and `/recap` commands
 
-The command lives at `~/.claude/commands/commit.md` and is **global** — install it once per machine.
+Both commands live in `~/.claude/commands/` and are **global** — install them once per machine.
 
 ```bash
-ls ~/.claude/commands/commit.md   # check if it already exists
+ls ~/.claude/commands/   # check what already exists
 ```
 
-If not:
+If not present:
 ```bash
 mkdir -p ~/.claude/commands
-cp path/to/scaffolding/commands/commit.md ~/.claude/commands/commit.md
+touch ~/.claude/commands/commit.md
+touch ~/.claude/commands/recap.md
+```
+
+### commit.md - File content
+
+```md
+Create a git commit and update project tracking files.
+
+## Steps
+
+1. **Check staged files** with `git diff --staged --name-only`
+   - If nothing is staged, check `git status` for modified/untracked files
+   - If there are unstaged changes, ask the user: "Nothing is staged. Stage all changes and commit?"
+   - If they say yes, stage everything relevant (avoid secrets, large binaries, .env files)
+   - If they say no, stop and ask them to stage manually
+
+2. **Understand the changes** by reading `git diff --staged`
+
+3. **Update TODO.md** (before committing):
+   - If the changes close a tracked task, move it to Done with today's date
+   - If the changes reveal a new task, add it to Backlog
+
+4. **Update DEVLOG.md** (before committing):
+   - Check the top entry's date
+   - If it matches today: append the new work to the existing entry's Done/Decisions fields
+   - If it is a different day: prepend a new entry using the format in CLAUDE.md
+   - Base the entry on the actual diff, not conversation memory
+
+5. **Write the commit message** — include all staged files (TODO.md, DEVLOG.md + code changes):
+   - First line: short imperative summary (max 72 chars)
+   - Body if needed: why the change was made, and which files were affected. Each line starts with a "-"
+   - Never add the Co-Authored-By line in the commit message
+
+6. **Commit** with `git commit`
+
+## Rules
+- Never use `--no-verify`
+- Never commit .env, credentials, or large data files
+- Stage TODO.md and DEVLOG.md as part of the same commit
 ```
 
 ### 3. Fill in CONTEXT.md
