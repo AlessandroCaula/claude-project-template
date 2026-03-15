@@ -121,7 +121,7 @@ Create a git commit and update project tracking files.
 - Stage TODO.md and DEVLOG.md as part of the same commit
 ```
 
-### status.md - File content
+### recap.md - File content
 
 ```md
 Give me a status update on the current project.
