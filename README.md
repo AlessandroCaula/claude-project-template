@@ -19,6 +19,7 @@ This scaffolding serves two purposes:
 | `TODO.md` | Task tracker with short IDs (`#N`) | Claude, automatically |
 | `DEVLOG.md` | Project journal, newest entry at top | Claude, on `/commit` |
 | `NOTES.md` | A scratchpad for ideas, supervisor feedback, open questions, and anything that doesn't fit neatly into TODO or DEVLOG |
+| `LESSONS.md` | Permanent record of edge cases, gotchas, and non-obvious problems solved — read at every session start |
 
 ---
 
@@ -27,7 +28,7 @@ This scaffolding serves two purposes:
 ### Session flow
 
 1. You open a conversation with Claude
-2. Claude reads `CONTEXT.md` → `TODO.md` → last 2 `DEVLOG.md` entries to get up to speed
+2. Claude reads `CONTEXT.md` → `TODO.md` → `LESSONS.md` → last 3 `DEVLOG.md` entries to get up to speed
 3. Work happens
 4. You run `/commit` → Claude updates `TODO.md` + `DEVLOG.md` + creates the git commit
 
@@ -66,6 +67,8 @@ CLAUDE.md       ← keep as-is (coding skills + coding standards + instructions 
 CONTEXT.md      ← fill in project goal, repo structure, toolchain
 TODO.md         ← start with empty sections
 DEVLOG.md       ← start empty
+LESSONS.md      ← start empty
+NOTES.md        ← start empty
 ```
 
 ### 2. Install the `/commit` and `/recap` commands
@@ -231,6 +234,17 @@ folder_2/   Description
 - Every task gets a `#N` ID, referenced in DEVLOG entries
 - Max 3 items in In Progress at any time
 - Completed tasks are never deleted, only moved to Done with a date
+
+### LESSONS.md entry
+
+```markdown
+## Short descriptive title (YYYY-MM-DD)
+Brief description of the problem and what made it non-obvious.
+- Concrete examples if relevant
+
+**Solution:** what the fix or correct approach is.
+**Where:** which scripts or modules are affected (optional).
+```
 
 ---
 
