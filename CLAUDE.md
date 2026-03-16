@@ -109,27 +109,33 @@ python script.py -i input.fasta -o output.fasta --length 20
 
 At the start of every session:
 1. Read CONTEXT.md for current project state
-2. Read TODO.md — identify what's In Progress
-3. Read the last 3 DEVLOG entries for recent decisions
-4. Glance at NOTES.md — check for open ideas or supervisor feedback that may be relevant
+2. Read LESSONS.md — know the gotchas before writing any code
+3. Read TODO.md — identify what's In Progress
+4. Read the last 3 DEVLOG entries for recent decisions
+5. Glance at NOTES.md — check for open ideas or supervisor feedback that may be relevant
 
 ### File Update Triggers
 
-Update TODO.md when:
+Update **TODO.md** when:
 - A task is started (move to In Progress)
 - A task is completed (move to Done with date)
 - A new task is discovered mid-session
 - A task is blocked and needs a note
 
-Update DEVLOG.md when:
+Update **DEVLOG.md** when:
 - The user runs `/commit` — append to today's entry if it exists, otherwise prepend a new one
 - A significant decision is made mid-conversation (note it to include in the next `/commit`)
 
-Consult NOTES.md when:
+Consult **NOTES.md** when:
 - The user asks what to explore, work on next, or what open questions exist
 - A new idea or supervisor feedback surfaces mid-conversation — suggest adding it
 
-Update CONTEXT.md when:
+Update **LESSONS.md** when:
+- A non-obvious edge case is solved (parsing quirks, data format inconsistencies, tool behaviour)
+- A mistake is made that could recur — add it so it won't happen again
+- A gotcha is discovered even if not yet solved — note it with an open marker
+
+Update **CONTEXT.md** when:
 - The repository structure changes (new folder added/removed)
 - The project goal is refined
 - A key tool or external dependency is added to the workflow
@@ -192,6 +198,19 @@ Each session gets one entry:
 
 **Next session:**
 - Pick up from #12
+```
+
+---
+
+### LESSONS.md Entry Format
+
+```markdown
+## Short descriptive title (YYYY-MM-DD)
+Brief description of the problem and what made it non-obvious.
+- Concrete examples if relevant
+
+**Solution:** what the fix or correct approach is.
+**Where:** which scripts or modules are affected (optional).
 ```
 
 ---

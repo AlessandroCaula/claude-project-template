@@ -108,17 +108,21 @@ Create a git commit and update project tracking files.
    - If it is a different day: prepend a new entry using the format in CLAUDE.md
    - Base the entry on the actual diff, not conversation memory
 
-5. **Write the commit message** — include all staged files (TODO.md, DEVLOG.md + code changes):
+5. **Update LESSONS.md** (before committing):
+   - Ask: did any of these changes solve something non-obvious that could recur?
+   - If yes, add a concise entry — what the problem was, what the solution was, and where it applies
+
+6. **Write the commit message** — include all staged files (TODO.md, DEVLOG.md + code changes):
    - First line: short imperative summary (max 72 chars)
    - Body if needed: why the change was made, and which files were affected. Each line starts with a "-"
    - Never add the Co-Authored-By line in the commit message
 
-6. **Commit** with `git commit`
+7. **Commit** with `git commit`
 
 ## Rules
 - Never use `--no-verify`
 - Never commit .env, credentials, or large data files
-- Stage TODO.md and DEVLOG.md as part of the same commit
+- Stage TODO.md, DEVLOG.md, and LESSONS.md (if updated) as part of the same commit
 ```
 
 ### recap.md - File content
