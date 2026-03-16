@@ -45,6 +45,16 @@ Every git commit is the unit of tracking. When you run `/commit`:
 
 Using the diff as the source of truth means DEVLOG stays accurate even across multiple conversation windows.
 
+### The `/wrap` command
+
+Run `/wrap` at the end of a working session to update the tracking files based on the conversation — without committing anything. Use it when you want to log decisions, discussions, or progress that didn't produce code changes.
+
+When you run `/wrap`, Claude:
+- Updates `TODO.md` based on what was discussed (tasks completed, new tasks discovered)
+- Updates `DEVLOG.md` with what was discussed and decided in the conversation
+- Updates `LESSONS.md` if anything non-obvious was solved or discovered
+- Does **not** run any git commands
+
 ### The `/recap` command
 
 Run `/recap` to get a quick project briefing — useful when coming back after time away or switching context. Claude reads `TODO.md`, `DEVLOG.md`, and `NOTES.md` and returns:
@@ -71,9 +81,9 @@ LESSONS.md      ← start empty
 NOTES.md        ← start empty
 ```
 
-### 2. Install the `/commit` and `/recap` commands
+### 2. Install the `/commit`, `/wrap`, and `/recap` commands
 
-Both commands live in `~/.claude/commands/` and are **global** — install them once per machine.
+All commands live in `~/.claude/commands/` and are **global** — install them once per machine.
 
 ```bash
 ls ~/.claude/commands/   # check what already exists
@@ -83,6 +93,7 @@ If not present:
 ```bash
 mkdir -p ~/.claude/commands
 touch ~/.claude/commands/commit.md
+touch ~/.claude/commands/wrap.md
 touch ~/.claude/commands/recap.md
 ```
 
@@ -99,20 +110,22 @@ Create a git commit and update project tracking files.
    - If they say yes, stage everything relevant (avoid secrets, large binaries, .env files)
    - If they say no, stop and ask them to stage manually
 
-2. **Understand the changes** by reading `git diff --staged`
+2. **Understand the changes** using both sources:
+   - `git diff --staged` — what changed in the code
+   - The current conversation — why it changed, decisions made, tasks discussed, problems solved
 
 3. **Update TODO.md** (before committing):
-   - If the changes close a tracked task, move it to Done with today's date
-   - If the changes reveal a new task, add it to Backlog
+   - If the diff or conversation indicates a task is done, move it to Done with today's date
+   - If the diff or conversation reveals a new task, add it to Backlog
 
 4. **Update DEVLOG.md** (before committing):
    - Check the top entry's date
-   - If it matches today: append the new work to the existing entry's Done/Decisions fields
+   - If it matches today: append to the existing entry's Done/Decisions fields
    - If it is a different day: prepend a new entry using the format in CLAUDE.md
-   - Base the entry on the actual diff, not conversation memory
+   - Use the diff for what changed in code, use the conversation for why and any decisions
 
 5. **Update LESSONS.md** (before committing):
-   - Ask: did any of these changes solve something non-obvious that could recur?
+   - Ask: did the diff or the conversation surface something non-obvious that could recur?
    - If yes, add a concise entry — what the problem was, what the solution was, and where it applies
 
 6. **Write the commit message** — include all staged files (TODO.md, DEVLOG.md + code changes):
@@ -126,6 +139,38 @@ Create a git commit and update project tracking files.
 - Never use `--no-verify`
 - Never commit .env, credentials, or large data files
 - Stage TODO.md, DEVLOG.md, and LESSONS.md (if updated) as part of the same commit
+```
+
+### wrap.md - File content
+
+```md
+Update project tracking files based on the current conversation. Does not commit anything.
+
+## Steps
+
+1. **Understand the session** using the current conversation:
+   - What was discussed, explored, or decided
+   - Any tasks completed, started, or discovered
+   - Any non-obvious problems solved or gotchas identified
+
+2. **Update TODO.md**:
+   - If the conversation indicates a task is done, move it to Done with today's date
+   - If the conversation reveals a new task, add it to Backlog
+
+3. **Update DEVLOG.md**:
+   - Check the top entry's date
+   - If it matches today: append to the existing entry's Done/Decisions fields
+   - If it is a different day: prepend a new entry using the format in CLAUDE.md
+   - Base the entry mainly on the conversation — focus on what was discussed and decided
+
+4. **Update LESSONS.md**:
+   - Ask: did the conversation surface something non-obvious that could recur?
+   - If yes, add a concise entry — what the problem was, what the solution was, and where it applies
+
+## Rules
+- Do not run any git commands — no staging, no committing
+- Never ask for confirmation before updating TODO.md, DEVLOG.md, or LESSONS.md
+- Skip any file that has nothing new to add
 ```
 
 ### recap.md - File content
