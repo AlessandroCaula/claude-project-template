@@ -117,6 +117,7 @@ Create a git commit and update project tracking files.
 3. **Update TODO.md** (before committing):
    - If the diff or conversation indicates a task is done, move it to Done with today's date
    - If the diff or conversation reveals a new task, add it to Backlog
+   - If the diff or conversation shows work was started on a task, move it to In Progress
 
 4. **Update DEVLOG.md** (before committing):
    - Check the top entry's date
@@ -156,6 +157,7 @@ Update project tracking files based on the current conversation. Does not commit
 2. **Update TODO.md**:
    - If the conversation indicates a task is done, move it to Done with today's date
    - If the conversation reveals a new task, add it to Backlog
+   - If the conversation shows work was started on a task, move it to In Progress
 
 3. **Update DEVLOG.md**:
    - Check the top entry's date
