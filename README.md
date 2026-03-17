@@ -183,7 +183,8 @@ Give me a status update on the current project.
 1. Read `TODO.md` — note what is In Progress, Up Next, and any blockers
 2. Read the last 3 entries in `DEVLOG.md` — summarise what was recently done and any open decisions
 3. Read `NOTES.md` — pick up any open ideas, supervisor feedback, or unresolved questions
-4. Read `CONTEXT.md` — for project goal and structure if needed for context
+4. Read `LESSONS.md` — keep known gotchas and edge cases in mind when suggesting next steps
+5. Read `CONTEXT.md` — for project goal and structure if needed for context
 
 ## Output
 
