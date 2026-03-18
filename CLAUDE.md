@@ -209,7 +209,7 @@ except Exception as e:
 ---
 
 ### Standard: CLI Arguments
-Follow the bioinformatics standard (samtools, bwa, seqkit, bedtools): **always use explicit flags, never positional arguments**. Flags are self-documenting, order-independent, and safer (no accidental input/output swap).
+Follow this standard: **always use explicit flags, never positional arguments**. Flags are self-documenting, order-independent, and safer (no accidental input/output swap).
 
 ```python
 parser.add_argument("-i", "--input",  required=True,  type=Path,
