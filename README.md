@@ -83,18 +83,45 @@ NOTES.md        ← start empty
 
 ### 2. Install the `/commit`, `/wrap`, and `/recap` commands
 
-All commands live in `~/.claude/commands/` and are **global** — install them once per machine.
+The `/commit`, `/wrap`, and `/recap` commands are defined as plain markdown files. They can be installed **globally** (available in every project) or **locally** (available only in the current project).
 
-```bash
-ls ~/.claude/commands/   # check what already exists
-```
+| Scope | Location | Use when |
+|-------|----------|----------|
+| Global | `~/.claude/commands/` | You want the command everywhere |
+| Local | `.claude/commands/` at project root | The command is project-specific |
 
-If not present:
+For `/commit`, `/wrap`, and `/recap`, **global installation is recommended** — these are workflow habits, not project-specific logic.
+
+---
+
+### Global install (recommended)
+
 ```bash
 mkdir -p ~/.claude/commands
+```
+
+Then create each file:
+
+```bash
 touch ~/.claude/commands/commit.md
 touch ~/.claude/commands/wrap.md
 touch ~/.claude/commands/recap.md
+```
+
+---
+
+### Local install (per project)
+
+```bash
+mkdir -p .claude/commands
+```
+
+Then create each file:
+
+```bash
+touch .claude/commands/commit.md
+touch .claude/commands/wrap.md
+touch .claude/commands/recap.md
 ```
 
 ### commit.md - File content
