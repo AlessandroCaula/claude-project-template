@@ -17,7 +17,7 @@ This scaffolding serves two purposes:
 | `CLAUDE.md` | Instructions for Claude: coding skills, session protocol, file update rules | You (rarely) |
 | `CONTEXT.md` | Current project state: goal, repo structure, toolchain | Claude, when structure changes |
 | `TODO.md` | Task tracker with short IDs (`#N`) | Claude, automatically |
-| `DEVLOG.md` | Project journal, newest entry at top | Claude, on `/commit` |
+| `DEVLOG.md` | Project journal, newest entry at top | Claude, on `/commit` or `/wrap` |
 | `NOTES.md` | A scratchpad for ideas, supervisor feedback, open questions, and anything that doesn't fit neatly into TODO or DEVLOG |
 | `LESSONS.md` | Permanent record of edge cases, gotchas, and non-obvious problems solved — read at every session start |
 
