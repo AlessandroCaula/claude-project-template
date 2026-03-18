@@ -1,198 +1,259 @@
-## Session Start Protocol
+# CLAUDE.md
 
-**MANDATORY: Execute these steps at the start of every conversation, before doing anything else.**
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-1. Read CONTEXT.md for current project state
-2. Read LESSONS.md — **required, no exceptions** — know the gotchas before writing any code
-3. Read TODO.md — identify what's In Progress
-4. Read the last 3 DEVLOG entries for recent decisions
-5. Glance at NOTES.md — check for open ideas or supervisor feedback that may be relevant
+**NOTE TO CLAUDE:** After making relevant changes to code, always update this file to reflect:
+- New functions/modules added
+- Architecture changes
+- Updated workflows
 
-## Project Tracking
+## Project Overview
 
-### File Update Triggers
+This directory contains tools for creating a new PlasmidFinder database by downloading plasmid sequences from NCBI GenBank and extracting conserved features (oriV, rep genes, etc.).
 
-Update **TODO.md** when:
-- A task is started (move to In Progress)
-- A task is completed (move to Done with date)
-- A new task is discovered mid-session
-- A task is blocked and needs a note
+## Workflow
 
-Update **DEVLOG.md** when:
-- The user runs `/commit` or `/wrap` — append to today's entry if it exists, otherwise prepend a new one
-- A significant decision is made mid-conversation (note it to include in the next `/commit` or `/wrap`)
+### Option 1: Unified Pipeline (Recommended)
+Use `pipeline.py` to automatically run the entire workflow:
+1. Load database configuration from `db_config.yaml`
+2. For each database: download → extract → write
+3. Merge all databases into combined FASTA file
+4. Generate summary report
 
-Consult **NOTES.md** when:
-- The user asks what to explore, work on next, or what open questions exist
-- A new idea or supervisor feedback surfaces mid-conversation — suggest adding it
+### Option 2: Manual Two-Step
+Run scripts independently:
+1. `genbank_scraper.py` - Download sequences from NCBI GenBank
+2. `feature_extractor.py` - Extract conserved features from GenBank files
 
-Update **LESSONS.md** when:
-- A non-obvious edge case is solved (parsing quirks, data format inconsistencies, tool behaviour)
-- A mistake is made that could recur — add it so it won't happen again
-- A gotcha is discovered even if not yet solved — note it with an open marker
+## Critical Design Decisions
 
-Update **CONTEXT.md** when:
-- The repository structure changes (new folder added/removed)
-- The project goal is refined
-- A key tool or external dependency is added to the workflow
+### 1. CON Record Filtering
+CON (Constructed) records are reference/scaffold records with NO sequence data. They MUST be filtered.
 
-### File Update Rules
+- **Filter at download:** Use `NOT CON[filter]` in Entrez query ([genbank_scraper.py:231](genbank_scraper.py#L231))
 
-- Never delete DEVLOG entries — always prepend new ones at the top
-- Never remove Done tasks from TODO.md
-- Never overwrite CONTEXT.md — edit in place, preserve history in DEVLOG
-- If unsure whether a change warrants a CONTEXT.md update, err on the side of updating it
-- Never ask for confirmation before updating TODO.md or DEVLOG.md — update them directly
+### 2. Multiple Features Per Record (IMPORTANT)
+One GenBank record (LOCUS) can produce multiple feature sequences. This is **expected and correct**.
 
---- 
+**Why:** A single plasmid may have:
+- oriV (origin of replication)
+- repA gene
+- repB gene
+- Multiple incompatibility determinants
 
-### TODO.md Management
+**Result:** 107 records with matches → 143 extracted feature sequences
 
-Maintain TODO.md with this exact structure:
-```markdown
-## In Progress
-- [ ] #12 Short description — *context or blocker note*
+**Decision:** Keep ALL matching features (comprehensive database for different biological elements)
 
-## Up Next
-- [ ] #13 Short description
 
-## Backlog
-- [ ] #14 Short description
+Reference: [feature_extractor.py:246-247](feature_extractor.py#L246-L247)
 
-## Done
-- [x] #11 Short description — completed 2025-06-01
+## Key Patterns
+
+### Records vs Features
+- **Record (LOCUS):** One GenBank entry (e.g., one plasmid sequence)
+- **Feature:** Annotated element within a record (e.g., oriV, rep gene)
+- Count records: `grep -c "^LOCUS" file.gb`
+- One record → many features (this is normal!)
+
+### Feature Matching
+Keyword-based search across:
+- Feature types: `rep_origin`, `CDS`, `misc_feature`, etc.
+- Qualifiers: `note`, `gene`, `product`, `label`, `function`
+- Word-boundary matching (`\b` regex) to avoid partial matches
+
+**Important — CDS /note false positives:**
+Automated annotation pipelines (Prokka, Bakta, resMGE/TIGR) embed detailed similarity
+descriptions in the `/note` qualifier of every `CDS` feature. These descriptions mention
+the source organism and replicon type, e.g.:
+
+```
+resMGE:SPE01034.1 conjugal F pilus assembly protein TraF
+(Escherichia coli IncF plasmid) [pid:99.6%, q_cov:100.0%, Eval:0.0e+00]
 ```
 
-Rules:
-- Every task gets a short ID (#N) for reference in DEVLOG
-- Completed tasks move to Done with a date; don't delete them
-- Max 3 items in "In Progress" — if you'd exceed this, flag it
-- Update without asking permission
-- If only part of a task is done, split it: move the completed part to Done, leave the rest in its current section
+This causes every conjugal transfer gene (TraF, TraQ, TrbB, TraH, TraG, TraD, TraI…)
+on an IncF plasmid to match the keyword `IncF`, producing dozens of false hits per
+record and filling the database with near-identical transfer gene sequences.
 
----
+**Solution — extraction modes (`--mode`):**
 
-### DEVLOG.md Entry Format
+| Mode | CDS features | Qualifiers for CDS | Typical yield (Inc groups) |
+|------|-------------|-------------------|---------------------------|
+| `no_cds` (default) | Skipped entirely | — | ~425 sequences |
+| `include_cds` | Included | `/gene`, `/product` only | ~15 000 sequences |
 
-Each session gets one entry:
-```markdown
-## YYYY-MM-DD
+- **no_cds** — CDS (and gene, tRNA, rRNA, ncRNA, mRNA) are skipped entirely. Only
+  explicitly annotated non-coding loci (`misc_feature`, `rep_region`, `rep_origin`,
+  `regulatory`, etc.) are matched. Smaller database, higher precision.
+- **include_cds** — CDS features are included but only checked via `/gene` and `/product`
+  (never `/note`). This avoids the worst false positives while still capturing rep
+  proteins whose `/product` explicitly names the replicon type.
 
-**Focus:** one-line summary of the session goal
+This is safe because:
+- The actual Inc group / oriV locus is annotated on `misc_feature`, `rep_region`, or
+  `rep_origin` features — not on CDS.
+- Rep proteins (RepA, RepB…) that legitimately identify a replicon have explicit
+  `/product` or `/gene` values; their `/note` is not needed.
+- The noise-pattern alternative (filtering notes containing "similar to", "BLASTP",
+  etc.) is fragile: resMGE/TIGR-format notes don't match those strings and would still
+  produce false positives.
 
-**Done:**
-- Describe changes at the feature or decision level, not file level
-- Explain why the change was made, not just what changed
-- Never list filenames unless the filename itself is meaningful context
-- Aim for 1 sentence per item
+See the `MODES` dict in [feature_extractor.py](feature_extractor.py).
 
-**Decisions:**
-- Chose approach A over B because [reason] — this is the most important field
+### GenBank Annotation Variability
+Same biological element can be annotated many different ways:
+- oriV might be: `rep_origin`, `misc_feature with /note="oriV"`, `regulatory`
+- rep gene might be: `CDS with /gene="repA"`, `gene`, `CDS with /product="replication protein"`
 
-**Blockers / open questions:**
-- Still unclear whether Z is the right tool here
+## Common Issues
 
-**Next session:**
-- Pick up from #12
+**Issue:** "143 features but only 107 records matched?"
+- **Answer:** One record can have multiple matching features (normal behavior)
+
+**Issue:** Sequences printing as "None"
+- **Answer:** Use `seq.defined` property, not just `seq is not None`
+
+**Issue:** Downloaded CON records with no sequence
+- **Answer:** Ensure `NOT CON[filter]` is in the Entrez query
+
+## Scripts
+
+### pipeline.py
+
+Unified orchestrator that runs the entire workflow from a configuration file.
+
+**Key Features:**
+- Reads `db_config.yaml` to define database groups
+- Runs scraper once per database (each with its own query and filters)
+- Extracts features per database using the chosen `--mode`
+- Merges all databases into a combined FASTA file (when `combined_fasta_output` is set in config and >1 database succeeds)
+- Supports `--databases` to build specific databases only
+- Supports `--skip-download` to reuse existing GenBank files
+- Supports `--mode no_cds|include_cds` to control CDS handling during extraction
+
+**Usage:**
+```bash
+# Build all databases in config
+python pipeline.py --email your@email.com
+
+# Custom output directory (created automatically if it does not exist)
+python pipeline.py --email your@email.com --output-dir /path/to/results
+
+# Build specific database with limit
+python pipeline.py --email your@email.com --databases origins --max 100
+
+# Skip download, use existing GenBank file
+python pipeline.py --email your@email.com --skip-download origins
+
+# Use include_cds extraction mode (includes CDS via /gene and /product)
+python pipeline.py --email your@email.com --mode include_cds
 ```
 
----
+**Combined Database:**
+After building all individual databases, the pipeline automatically merges them into a single comprehensive database:
+- Headers are prefixed with source database name (e.g., `>Incompatibility plasmid|CP000001.1|rep_origin|[1000:2500](+)|IncF|[Escherichia coli] plasmid pXYZ`)
+- Allows searching all plasmid features in one file
+- Output path configured in `db_config.yaml` (`combined_fasta_output`)
+- Metadata tracks source databases and total feature count
+- Useful for comprehensive searches across all feature types
 
-### LESSONS.md Entry Format
+### db_config.yaml
 
-```markdown
-## Short descriptive title (YYYY-MM-DD)
-Brief description of the problem and what made it non-obvious.
-- Concrete examples if relevant
+Configuration file defining database groups and combined output.
 
-**Solution:** what the fix or correct approach is.
-**Where:** which scripts or modules are affected (optional).
+**Top-level configuration:**
+- `combined_fasta_output` - path for merged database containing all features from all databases
+
+**Per-database configuration:**
+- `scraper_query` - what to search for in NCBI
+- `organism`, `min_length`, `max_length` - per-database filters
+- `max_results` (optional) - maximum sequences to download for this database
+- `keywords` - what features to extract from downloaded sequences
+- `genbank_output` - where to save GenBank file
+- `fasta_output` - where to save individual database FASTA
+
+**Note:** Per-database `max_results` takes precedence over the command-line `--max` argument. If neither is specified, all matching sequences are downloaded.
+
+**Adding new databases:** Just append to the `databases` list in YAML.
+
+## Dependencies
+
+- BioPython (`pip install biopython`)
+- PyYAML (`pip install pyyaml`)
+- Python 3.6+
+
+# Skills
+
+## Skill: Type Hints
+Always use type hints for function parameters and return values:
+```python
+def calculate_gc_content(sequence: str) -> float:
+    return (sequence.count('G') + sequence.count('C')) / len(sequence)
 ```
 
----
+## Skill: Docstrings
+Use appropriate documentation for function complexity.
 
-### NOTES.md Format
-
-A scratchpad for ideas, supervisor feedback, and open questions. No enforced structure, but follow these conventions:
-
-```markdown
-- YYYY-MM-DD — concise note, one sentence is enough
-- YYYY-MM-DD — supervisor feedback: use X approach for the database comparison
-- YYYY-MM-DD — idea: could MOB-suite replace the manual Inc group annotation step?
-```
-
-Rules:
-- One bullet per note
-- Always include a date
-- Keep it short
-
----
-
-## Coding Standards
-
----
-
-### Standard: Docstrings
-Match documentation depth to function complexity.
-
-**Simple function** — one-liner:
+**Simple functions:** Brief one-liner
 ```python
 def sanitize_filename(text: str) -> str:
     """Remove special characters from filename."""
     return re.sub(r"[^\w\s-]", "", text)
 ```
 
-**Complex function** — full docstring:
+**Complex functions:** Full docstring with Args/Returns
 ```python
 def extract_features(record: SeqRecord, keywords: list[str]) -> list[SeqRecord]:
     """
-    Extract features from a GenBank record matching any of the given keywords.
-
+    Extract features from GenBank record matching keywords.
+    
     Args:
-        record:   GenBank SeqRecord to search.
-        keywords: Keywords to match (case-insensitive, word-boundary matched).
-
+        record: GenBank SeqRecord to search
+        keywords: Keywords to match (case-insensitive)
+        
     Returns:
-        List of matching feature sequences as SeqRecord objects.
+        List of matching feature sequences
     """
 ```
 
-**Prefer simple function**
+**Use full docstrings when:**
+- Function is public API
+- Logic is complex
+- Behavior is non-obvious
+- Function does I/O
 
-**Use complex function docstrings only when:**
-- Function is part of a public/importable API
-- Logic is non-trivial or has edge cases or has more than 5 parameters
+**NOTE TO CLAUDE:** Keep it simple - over-documentation reduces readability.
 
----
-
-### Standard: Code Structure
-Use section separators to break scripts into logical blocks:
-
+## Skill: Code structure
+Use section separators for logical blocks:
 ```python
-# ====== Major Sections ====== #  (for file-level blocks)
-# --- Step Description --- #      (for within functions)
-# normal comments               (for inline explanations)
+# ====== Input Validation ======
+if not filepath.exists():
+    raise FileNotFoundError(f"{filepath} not found")
 
-# Example:
-# ====== CORE WORKFLOW ====== #
-def run_extractor(...):
-    # --- Extract features --- #
-    results = extract_features(gb_file, keywords)
+# ====== Data Processing ======
+sequences = []
+for record in SeqIO.parse(filepath, "fasta"):
+    # --- Extract sequence ---
+    seq = str(record.seq)
+
+    # Some other normal comment for the same section
     
-    # Some other standard comments
-    return results
+    # --- Calculate metrics ---
+    gc_content = calculate_gc(seq)
+    sequences.append((seq, gc_content))
+
+# ====== Return Results ======
+return sequences
 ```
 
-- Inside functions: comment the WHY, not the WHAT
-
----
-
-### Standard: Error Messages
+## Skill: Error Messages
 Log errors with context, never fail silently:
 ```python
 try:
     sequences = parse_fasta(filepath)
-except FileNotFoundError:
+except FileNotFoundError as e:
     logger.error(f"File not found: {filepath}")
     raise
 except Exception as e:
@@ -200,33 +261,4 @@ except Exception as e:
     raise
 ```
 
----
-
-### Standard: CLI Arguments
-Follow the bioinformatics standard (samtools, bwa, seqkit, bedtools): **always use explicit flags, never positional arguments**. Flags are self-documenting, order-independent, and safer (no accidental input/output swap).
-
-```python
-parser.add_argument("-i", "--input",  required=True,  type=Path,
-                    help="Input FASTA file")
-parser.add_argument("-o", "--output", required=False, type=Path, default=None,
-                    help="Output file (default: derived from input filename)")
-```
-
-**Rules:**
-- `-i`/`--input` and `-o`/`--output` are reserved for input/output only
-- Input is always `required=True`
-- Output is usually optional; derive a default from the input stem when omitted
-- All other parameters use only long-form flags (`--length`, `--mode`, etc.)
-- No short flags other than `-i` and `-o`
-
-**Usage looks like:**
-```bash
-python script.py -i input.fasta -o output.fasta --length 20
-```
-
----
-
-### Standard: Output formatting
-- Plain ASCII only — no Unicode symbols (✓ ✗ ⚠ →)
-- Use [OK], [ERROR], [WARNING] for status messages
-- Use -> for arrows
+**NOTE TO CLAUDE:** Apply these skills to all code automatically.
