@@ -87,20 +87,18 @@ Each session gets one entry:
 **Focus:** one-line summary of the session goal
 
 **Done:**
-- Describe changes at the feature or decision level, not file level
-- Explain why the change was made, not just what changed
-- Never list filenames unless the filename itself is meaningful context
-- Aim for 1 sentence per item
+- 2-4 bullets max — high-level features or outcomes, not a changelog
+- Skip anything already obvious from the commit message
 
 **Decisions:**
 - Chose approach A over B because [reason] — this is the most important field
-
-**Blockers / open questions:**
-- Still unclear whether Z is the right tool here
+- One bullet per non-obvious choice; omit obvious ones
 
 **Next session:**
-- Pick up from #12
+- Pick up from #N
 ```
+
+**Blockers / open questions** is optional — only include if something is genuinely unresolved.
 
 ---
 
