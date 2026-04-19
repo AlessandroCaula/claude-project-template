@@ -1,330 +1,97 @@
-# Claude Project Scaffolding
+# claude-project-template
 
-A lightweight system for tracking project progress and keeping Claude oriented across conversations, using plain markdown files and a custom slash command.
+A reusable `.claude/` scaffold that gives you and Claude Code a persistent memory across sessions.
 
----
+## What this is
 
-## Overview
+Claude Code's context resets between sessions. This template provides a structured tracking system — a session journal, a task tracker, a lessons log, and a scratchpad — so that decisions, open work, and hard-won gotchas survive across conversations.
 
-This scaffolding serves two purposes:
-- **For you**: a running log of tasks, decisions, and progress across the lifetime of a project
-- **For Claude**: external memory that lets it reconstruct context at the start of every conversation
-
-### Files
-
-| File | Purpose | Updated by |
-|------|---------|------------|
-| `CLAUDE.md` | Instructions for Claude: coding skills, session protocol, file update rules | You (rarely) |
-| `CONTEXT.md` | Current project state: goal, repo structure, toolchain | Claude, when structure changes |
-| `TODO.md` | Task tracker with short IDs (`#N`) | Claude, automatically |
-| `DEVLOG.md` | Project journal, newest entry at top | Claude, on `/commit` or `/wrap` |
-| `NOTES.md` | A scratchpad for ideas, supervisor feedback, open questions, and anything that doesn't fit neatly into TODO or DEVLOG |
-| `LESSONS.md` | Permanent record of edge cases, gotchas, and non-obvious problems solved — read at every session start |
+Clone this repository as the `.claude/` folder inside any project to get started.
 
 ---
 
-## How It Works
+## Quick start
 
-### Session flow
-
-1. You open a conversation with Claude
-2. Claude reads `CONTEXT.md` → `TODO.md` → `LESSONS.md` → last 3 `DEVLOG.md` entries to get up to speed
-3. Work happens
-4. You run `/commit` → Claude updates `TODO.md` + `DEVLOG.md` + creates the git commit
-
-### The `/commit` command
-
-Every git commit is the unit of tracking. When you run `/commit`:
-
-- Claude checks staged files (`git diff --staged`)
-- If nothing is staged but changes exist, Claude asks whether to stage everything
-- `TODO.md` is updated: completed tasks → Done, any new tasks → Backlog
-- `DEVLOG.md` is updated: appended to today's entry if one exists, otherwise a new entry is prepended
-- A meaningful commit message is written and the commit is made
-- `TODO.md` and `DEVLOG.md` are included in the same commit
-
-Using the diff as the source of truth means DEVLOG stays accurate even across multiple conversation windows.
-
-### The `/wrap` command
-
-Run `/wrap` at the end of a working session to update the tracking files based on the conversation — without committing anything. Use it when you want to log decisions, discussions, or progress that didn't produce code changes.
-
-When you run `/wrap`, Claude:
-- Updates `TODO.md` based on what was discussed (tasks completed, new tasks discovered)
-- Updates `DEVLOG.md` with what was discussed and decided in the conversation
-- Updates `LESSONS.md` if anything non-obvious was solved or discovered
-- Does **not** run any git commands
-
-### The `/recap` command
-
-Run `/recap` to get a quick project briefing — useful when coming back after time away or switching context. Claude reads `TODO.md`, `DEVLOG.md`, and `NOTES.md` and returns:
-
-- What is currently in progress
-- What was recently done and decided
-- Open questions and ideas from NOTES.md
-- Suggested next steps based on Up Next and NOTES.md
-
----
-
-## Setting Up a New Project
-
-### 1. Copy the template files
-
-Copy these into the root of your new repository:
-
-```
-CLAUDE.md       ← keep as-is (coding skills + coding standards + instructions for Claude)
-CONTEXT.md      ← fill in project goal, repo structure, toolchain
-TODO.md         ← start with empty sections
-DEVLOG.md       ← start empty
-LESSONS.md      ← start empty
-NOTES.md        ← start empty
-```
-
-### 2. Install the `/commit`, `/wrap`, and `/recap` commands
-
-The `/commit`, `/wrap`, and `/recap` commands are defined as plain markdown files. They can be installed **globally** (available in every project) or **locally** (available only in the current project).
-
-| Scope | Location | Use when |
-|-------|----------|----------|
-| Global | `~/.claude/commands/` | You want the command everywhere |
-| Local | `.claude/commands/` at project root | The command is project-specific |
-
-For `/commit`, `/wrap`, and `/recap`, **global installation is recommended** — these are workflow habits, not project-specific logic.
-
----
-
-### Global install (recommended)
-
+**1. Clone into your project as `.claude/`:**
 ```bash
-mkdir -p ~/.claude/commands
+git clone https://github.com/your-username/claude-project-template.git .claude
 ```
 
-Then create each file:
+**2. Fill in `CLAUDE.md`** — update the Project section with your project's description, repo structure, environment, and toolchain. Leave everything else as-is.
 
-```bash
-touch ~/.claude/commands/commit.md
-touch ~/.claude/commands/wrap.md
-touch ~/.claude/commands/recap.md
+**3. Open Claude Code.** It will read the session start protocol and memory files automatically.
+
+---
+
+## File structure
+
+```
+.claude/
+├── CLAUDE.md              # Claude's instructions: session protocol, file formats, update rules
+├── commands/              # Custom slash commands (auto-loaded by Claude Code)
+│   ├── new-session.md     # /new-session
+│   ├── wrap.md            # /wrap
+│   ├── commit.md          # /commit
+│   └── recap.md           # /recap
+├── skills/                # Optional skill definitions
+│   ├── search/            # /search
+│   ├── plan/              # /plan
+│   └── excalidraw/        # /excalidraw
+└── memory/                # Persistent memory files
+    ├── JOURNAL.md         # Session log: what was done, why, and what's next
+    ├── TODO.md            # Task tracker: In Progress / Up Next / Backlog / Done
+    ├── LESSONS.md         # Gotchas and non-obvious solutions — read at every session start
+    └── NOTES.md           # Scratchpad: ideas, meeting notes, open questions
 ```
 
 ---
 
-### Local install (per project)
+## The `memory/` files
 
-```bash
-mkdir -p .claude/commands
-```
+These are the core of the system. Claude reads them at the start of every session and updates them when you run `/wrap` or `/commit`.
 
-Then create each file:
-
-```bash
-touch .claude/commands/commit.md
-touch .claude/commands/wrap.md
-touch .claude/commands/recap.md
-```
-
-### commit.md - File content
-
-```md
-Create a git commit and update project tracking files.
-
-## Steps
-
-1. **Check staged files** with `git diff --staged --name-only`
-   - If nothing is staged, check `git status` for modified/untracked files
-   - If there are unstaged changes, ask the user: "Nothing is staged. Stage all changes and commit?"
-   - If they say yes, stage everything relevant (avoid secrets, large binaries, .env files)
-   - If they say no, stop and ask them to stage manually
-
-2. **Understand the changes** using both sources:
-   - `git diff --staged` — what changed in the code
-   - The current conversation — why it changed, decisions made, tasks discussed, problems solved
-
-3. **Update TODO.md** (before committing):
-   - If the diff or conversation indicates a task is done, move it to Done with today's date
-   - If the diff or conversation reveals a new task, add it to Backlog
-   - If the diff or conversation shows work was started on a task, move it to In Progress
-
-4. **Update DEVLOG.md** (before committing):
-   - Check the top entry's date
-   - If it matches today: append to the existing entry's Done/Decisions fields
-   - If it is a different day: prepend a new entry using the format in CLAUDE.md
-   - Use the diff for what changed in code, use the conversation for why and any decisions
-
-5. **Update LESSONS.md** (before committing):
-   - Ask: did the diff or the conversation surface something non-obvious that could recur?
-   - If yes, add a concise entry — what the problem was, what the solution was, and where it applies
-
-6. **Write the commit message** — include all staged files (TODO.md, DEVLOG.md + code changes):
-   - First line: short imperative summary (max 72 chars)
-   - Body if needed: why the change was made, and which files were affected. Each line starts with a "-"
-   - Never add the Co-Authored-By line in the commit message
-
-7. **Commit** with `git commit`
-
-## Rules
-- Never use `--no-verify`
-- Never commit .env, credentials, or large data files
-- Stage TODO.md, DEVLOG.md, and LESSONS.md (if updated) as part of the same commit
-```
-
-### wrap.md - File content
-
-```md
-Update project tracking files based on the current conversation. Does not commit anything.
-
-## Steps
-
-1. **Understand the session** using the current conversation:
-   - What was discussed, explored, or decided
-   - Any tasks completed, started, or discovered
-   - Any non-obvious problems solved or gotchas identified
-
-2. **Update TODO.md**:
-   - If the conversation indicates a task is done, move it to Done with today's date
-   - If the conversation reveals a new task, add it to Backlog
-   - If the conversation shows work was started on a task, move it to In Progress
-
-3. **Update DEVLOG.md**:
-   - Check the top entry's date
-   - If it matches today: append to the existing entry's Done/Decisions fields
-   - If it is a different day: prepend a new entry using the format in CLAUDE.md
-   - Base the entry mainly on the conversation — focus on what was discussed and decided
-
-4. **Update LESSONS.md**:
-   - Ask: did the conversation surface something non-obvious that could recur?
-   - If yes, add a concise entry — what the problem was, what the solution was, and where it applies
-
-## Rules
-- Do not run any git commands — no staging, no committing
-- Never ask for confirmation before updating TODO.md, DEVLOG.md, or LESSONS.md
-- Skip any file that has nothing new to add
-```
-
-### recap.md - File content
-
-```md
-Give me a status update on the current project.
-
-## Steps
-
-1. Read `TODO.md` — note what is In Progress, Up Next, and any blockers
-2. Read the last 3 entries in `DEVLOG.md` — summarise what was recently done and any open decisions
-3. Read `NOTES.md` — pick up any open ideas, supervisor feedback, or unresolved questions
-4. Read `LESSONS.md` — keep known gotchas and edge cases in mind when suggesting next steps
-5. Read `CONTEXT.md` — for project goal and structure if needed for context
-
-## Output
-
-Give a short, structured briefing:
-
-**Current state:** What is actively being worked on (#IDs) and where things stand.
-
-**Recently done:** 2-3 sentences max on what was completed and decided.
-
-**Open questions / ideas:** Anything from NOTES.md or DEVLOG blockers worth surfacing.
-
-**Suggested next steps:** Based on Up Next in TODO.md and any relevant NOTES, suggest 2-3 concrete things to work on next — ranked by priority or logical dependency.
-
-Keep it concise. This is a quick orienteering tool, not a full report.
-```
-
-### 3. Fill in CONTEXT.md
-
-```markdown
-# Project Name
-
-## Project Goal
-One paragraph describing what this project does and why.
-
-## Repository Structure
-\`\`\`
-folder_1/   Description
-folder_2/   Description
-\`\`\`
-
-## Environment
-- Python X.Y+
-
-## Toolchain
-- Tool A: what it does
-- Tool B: what it does
-```
-
-### 4. Initialise TODO.md
-
-```markdown
-## In Progress
-
-## Up Next
-
-## Backlog
-
-## Done
-```
+| File | Purpose |
+|------|---------|
+| `JOURNAL.md` | Append-only session log. Each entry captures focus, outcomes, decisions, and the next pickup point. Never delete entries — the full history is the value. |
+| `TODO.md` | Task tracker with four sections. Claude manages *In Progress*, *Up Next*, and *Done*. You manage *Backlog* manually. |
+| `LESSONS.md` | Permanent record of non-obvious problems and their solutions. Claude reads this before every session to avoid repeating mistakes. |
+| `NOTES.md` | Free-form scratchpad. Meeting notes, ideas, supervisor feedback, open questions — anything that doesn't fit elsewhere. |
 
 ---
 
-## File Formats
+## Commands
 
-### DEVLOG.md entry
-
-```markdown
-### YYYY-MM-DD
-
-**Focus:** one-line summary of what was worked on
-
-**Done:**
-- What changed and *why*, not just which files were touched
-
-**Decisions:**
-- Chose approach A over B because [reason]
-
-**Blockers / open questions:**
-- Still unclear whether X is the right approach
-
-**Next:**
-- Pick up from #N
-```
-
-### TODO.md
-
-```markdown
-## In Progress
-- [ ] #3 Short description — *context or blocker note*
-
-## Up Next
-- [ ] #4 Short description
-
-## Backlog
-- [ ] #5 Short description
-
-## Done
-- [x] #2 Short description — completed 2026-01-15
-- [x] #1 Short description — completed 2026-01-10
-```
-
-**Rules:**
-- Every task gets a `#N` ID, referenced in DEVLOG entries
-- Max 3 items in In Progress at any time
-- Completed tasks are never deleted, only moved to Done with a date
-
-### LESSONS.md entry
-
-```markdown
-## Short descriptive title (YYYY-MM-DD)
-Brief description of the problem and what made it non-obvious.
-- Concrete examples if relevant
-
-**Solution:** what the fix or correct approach is.
-**Where:** which scripts or modules are affected (optional).
-```
+| Command | What it does |
+|---------|-------------|
+| `/new-session` | Orients Claude: reads all memory files, maps the codebase, and suggests a next step |
+| `/wrap` | Updates TODO and JOURNAL based on the current conversation — no git commit |
+| `/commit` | Same as `/wrap`, then creates a git commit in the main project |
+| `/recap` | Read-only briefing: current state, what was recently done, open questions, and suggested next steps |
+| `/search` | Searches memory files for a keyword, decision, link, or tool from a past session |
 
 ---
 
-## Notes
+## Customization
 
-- `CLAUDE.md` contains coding conventions intended to be reused across projects. Keep project-specific content in `CONTEXT.md`.
-- If you commit without using `/commit`, DEVLOG and TODO won't be updated automatically — just include those updates in the next `/commit`.
-- The system works best with small, frequent commits.
+- Edit `CLAUDE.md` to add project-specific coding standards, environment details, or workflow rules
+- Add or remove skills from `skills/` depending on your project type
+- The `memory/` files start as stubs — they fill up naturally as you work
+
+---
+
+## Keeping it private (optional)
+
+By default, `.claude/` is part of your project repository. If you want your personal tracking (JOURNAL, TODO, NOTES, LESSONS) to stay private and separate from the main project, one approach is to treat `.claude/` as its own independent git repository:
+
+**1. Add `.claude/` to your project's `.gitignore`:**
+```
+.claude/
+```
+
+**2. Point `.claude/` at a private remote:**
+```bash
+cd .claude
+git remote set-url origin <your-private-repo-url>
+```
+
+This way the main project repo never sees your tracking files, but you can still push and pull them independently — including across multiple machines.

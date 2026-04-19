@@ -1,4 +1,6 @@
-### YYYY-MM-DD
+## YYYY-MM-DD
+
+### Session N
 
 **Focus:** one-line summary of what was worked on
 
