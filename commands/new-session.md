@@ -14,9 +14,11 @@ Get oriented in a new session by reading the project structure, tracking files, 
 
 3. **Discover and map the codebase**:
    - List all top-level directories and files
+   - Identify the language and stack from manifest or config files (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, `pom.xml`, `build.gradle`, etc.)
    - For each subdirectory, find and read its main entry point:
-     - Prefer in order: its own `.claude/CLAUDE.md`, its own `README.md`, then a file named `pipeline.py`, `main.py`, `__main__.py`, `cli.py`, `app.py`
-     - Otherwise, read the file most likely to be central (has `if __name__ == "__main__"`, or is imported by others)
+     - Prefer in order: its own `CLAUDE.md`, its own `README.md`
+     - Then look for common entry points by name: `main.*`, `index.*`, `app.*`, `cli.*`, `server.*`
+     - Otherwise, read the file most likely to be central (most imported by others, or has a clear entry-point pattern for the detected language)
    - Goal: understand what each module is responsible for and how it fits in — not a file-by-file inventory
 
 4. **Output a structured summary**:

@@ -67,7 +67,18 @@ These are the core of the system. Claude reads them at the start of every sessio
 | `/wrap` | Updates TODO and JOURNAL based on the current conversation — no git commit |
 | `/commit` | Same as `/wrap`, then creates a git commit in the main project |
 | `/recap` | Read-only briefing: current state, what was recently done, open questions, and suggested next steps |
-| `/search` | Searches memory files for a keyword, decision, link, or tool from a past session |
+
+---
+
+## Skills
+
+Skills are invoked automatically by Claude based on context, not typed as slash commands.
+
+| Skill | What it does |
+|-------|-------------|
+| `search` | Searches memory files for a keyword, decision, link, or tool from a past session |
+| `plan` | Plans an implementation strategy before writing code |
+| `excalidraw` | Generates Excalidraw diagrams from descriptions |
 
 ---
 
