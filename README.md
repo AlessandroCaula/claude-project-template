@@ -1,4 +1,4 @@
-# claude-project-template
+# dot-claude
 
 A reusable `.claude/` scaffold that gives you and Claude Code a persistent memory across sessions.
 
@@ -14,7 +14,7 @@ Clone this repository as the `.claude/` folder inside any project to get started
 
 **1. Clone into your project as `.claude/`:**
 ```bash
-git clone https://github.com/your-username/claude-project-template.git .claude
+git clone https://github.com/your-username/dot-claude.git .claude
 ```
 
 **2. Fill in `CLAUDE.md`** — update the Project section with your project's description, repo structure, environment, and toolchain. Leave everything else as-is.
